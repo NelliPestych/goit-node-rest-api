@@ -3,6 +3,7 @@ import morgan from "morgan";
 import cors from "cors";
 
 import contactsRouter from "./routes/contactsRouter.js";
+import initDatabase from "./config/initDB.js";
 
 const app = express();
 
@@ -21,8 +22,20 @@ app.use((err, req, res, next) => {
   res.status(status).json({ message });
 });
 
-app.listen(3000, () => {
-  console.log("Server is running. Use our API on port: 3000");
-});
+// Инициализируем базу данных и запускаем сервер
+const PORT = 3000;
 
-app.use((req,res)=>{res.status(404).json({message:'Not found'});});
+async function startServer() {
+  try {
+    await initDatabase();
+    
+    app.listen(PORT, () => {
+      console.log("Server is running. Use our API on port:", PORT);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();

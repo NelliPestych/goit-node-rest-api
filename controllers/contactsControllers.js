@@ -4,6 +4,7 @@ import {
   removeContact,
   addContact,
   updateContact,
+  updateStatusContact,
 } from '../services/contactsServices.js';
 import HttpError from '../helpers/HttpError.js';
 
@@ -59,6 +60,22 @@ export const updateContactController = async (req, res, next) => {
     if (!updated) {
       return next(HttpError(404, 'Not found'));
     }
+    res.status(200).json(updated);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const updateStatusContactController = async (req, res, next) => {
+  try {
+    const { contactId } = req.params;
+    const { favorite } = req.body;
+    
+    const updated = await updateStatusContact(contactId, { favorite });
+    if (!updated) {
+      return next(HttpError(404, 'Not found'));
+    }
+    
     res.status(200).json(updated);
   } catch (e) {
     next(e);

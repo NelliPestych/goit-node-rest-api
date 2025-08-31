@@ -5,9 +5,10 @@ import {
   deleteContact,
   createContact,
   updateContactController,
+  updateStatusContactController,
 } from '../controllers/contactsControllers.js';
 import validateBody from '../helpers/validateBody.js';
-import { addContactSchema, updateContactSchema } from '../schemas/contactsSchemas.js';
+import { addContactSchema, updateContactSchema, updateStatusContactSchema } from '../schemas/contactsSchemas.js';
 
 const contactsRouter = express.Router();
 
@@ -21,5 +22,8 @@ contactsRouter.put('/:id', (req, res, next) => {
   }
   next();
 }, validateBody(updateContactSchema), updateContactController);
+
+// Новый роут для обновления статуса favorite
+contactsRouter.patch('/:contactId/favorite', validateBody(updateStatusContactSchema), updateStatusContactController);
 
 export default contactsRouter;
