@@ -10,7 +10,8 @@ import HttpError from '../helpers/HttpError.js';
 
 export const getAllContacts = async (req, res, next) => {
   try {
-    const contacts = await listContacts();
+    const { id: owner } = req.user;
+    const contacts = await listContacts(owner);
     res.status(200).json(contacts);
   } catch (e) {
     next(e);
@@ -20,7 +21,8 @@ export const getAllContacts = async (req, res, next) => {
 export const getContact = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const contact = await getContactById(id);
+    const { id: owner } = req.user;
+    const contact = await getContactById(id, owner);
     if (!contact) {
       return next(HttpError(404, 'Not found'));
     }
@@ -33,7 +35,8 @@ export const getContact = async (req, res, next) => {
 export const deleteContact = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const removed = await removeContact(id);
+    const { id: owner } = req.user;
+    const removed = await removeContact(id, owner);
     if (!removed) {
       return next(HttpError(404, 'Not found'));
     }
@@ -46,7 +49,8 @@ export const deleteContact = async (req, res, next) => {
 export const createContact = async (req, res, next) => {
   try {
     const { name, email, phone } = req.body;
-    const newContact = await addContact({ name, email, phone });
+    const { id: owner } = req.user;
+    const newContact = await addContact({ name, email, phone, owner });
     res.status(201).json(newContact);
   } catch (e) {
     next(e);
@@ -56,7 +60,8 @@ export const createContact = async (req, res, next) => {
 export const updateContactController = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updated = await updateContact(id, req.body);
+    const { id: owner } = req.user;
+    const updated = await updateContact(id, req.body, owner);
     if (!updated) {
       return next(HttpError(404, 'Not found'));
     }
@@ -70,8 +75,9 @@ export const updateStatusContactController = async (req, res, next) => {
   try {
     const { contactId } = req.params;
     const { favorite } = req.body;
+    const { id: owner } = req.user;
     
-    const updated = await updateStatusContact(contactId, { favorite });
+    const updated = await updateStatusContact(contactId, { favorite }, owner);
     if (!updated) {
       return next(HttpError(404, 'Not found'));
     }

@@ -1,5 +1,6 @@
 import sequelize from './database.js';
 import Contact from '../models/Contact.js';
+import User from '../models/User.js';
 
 export async function initDatabase() {
   try {
@@ -10,7 +11,7 @@ export async function initDatabase() {
     // Синхронизируем модели с базой данных
     // force: true - пересоздает таблицы (используйте только для разработки!)
     // alter: true - обновляет существующие таблицы
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ force: true });
     console.log('Database synchronized successfully');
     
   } catch (error) {
