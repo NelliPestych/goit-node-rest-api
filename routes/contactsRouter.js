@@ -8,9 +8,13 @@ import {
   updateStatusContactController,
 } from '../controllers/contactsControllers.js';
 import validateBody from '../helpers/validateBody.js';
+import { authenticateToken } from '../middleware/auth.js';
 import { addContactSchema, updateContactSchema, updateStatusContactSchema } from '../schemas/contactsSchemas.js';
 
 const contactsRouter = express.Router();
+
+// Всі роути потребують аутентифікації
+contactsRouter.use(authenticateToken);
 
 contactsRouter.get('/', getAllContacts);
 contactsRouter.get('/:id', getContact);

@@ -1,4 +1,9 @@
 import { Sequelize } from 'sequelize';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const { JWT_SECRET = 'your-secret-key' } = process.env;
 
 const sequelize = new Sequelize({
   dialect: 'postgres',
