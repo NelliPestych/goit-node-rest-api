@@ -1,7 +1,14 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import gravatar from 'gravatar';
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import User from '../models/User.js';
 import HttpError from '../helpers/HttpError.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const { JWT_SECRET } = process.env;
 
@@ -18,16 +25,25 @@ export const register = async (req, res, next) => {
     // Хешуємо пароль
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Генеруємо аватар за допомогою gravatar
+    const avatarURL = gravatar.url(email, {
+      s: '200',
+      r: 'pg',
+      d: 'identicon'
+    });
+
     // Створюємо користувача
     const user = await User.create({
       email,
       password: hashedPassword,
+      avatarURL,
     });
 
     res.status(201).json({
       user: {
         email: user.email,
         subscription: user.subscription,
+        avatarURL: user.avatarURL,
       },
     });
   } catch (error) {
@@ -62,6 +78,7 @@ export const login = async (req, res, next) => {
       user: {
         email: user.email,
         subscription: user.subscription,
+        avatarURL: user.avatarURL,
       },
     });
   } catch (error) {
@@ -83,11 +100,12 @@ export const logout = async (req, res, next) => {
 
 export const getCurrent = async (req, res, next) => {
   try {
-    const { email, subscription } = req.user;
+    const { email, subscription, avatarURL } = req.user;
     
     res.json({
       email,
       subscription,
+      avatarURL,
     });
   } catch (error) {
     next(error);
@@ -109,8 +127,54 @@ export const updateSubscription = async (req, res, next) => {
     res.json({
       email: user.email,
       subscription: user.subscription,
+      avatarURL: user.avatarURL,
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAvatar = async (req, res, next) => {
+  try {
+    const { id } = req.user;
+    
+    if (!req.file) {
+      throw HttpError(400, 'No file uploaded');
+    }
+
+    const user = await User.findByPk(id);
+    if (!user) {
+      throw HttpError(404, 'User not found');
+    }
+
+    // Створюємо унікальне ім'я файлу
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const fileExtension = path.extname(req.file.originalname);
+    const fileName = `avatar-${id}-${uniqueSuffix}${fileExtension}`;
+    
+    // Шляхи до файлів
+    const tempPath = req.file.path;
+    const publicPath = path.join(__dirname, '..', 'public', 'avatars', fileName);
+    
+    // Переносимо файл з temp в public/avatars
+    await fs.rename(tempPath, publicPath);
+    
+    // Оновлюємо avatarURL в базі даних
+    const avatarURL = `/avatars/${fileName}`;
+    await user.update({ avatarURL });
+    
+    res.json({
+      avatarURL: avatarURL,
+    });
+  } catch (error) {
+    // Видаляємо тимчасовий файл у випадку помилки
+    if (req.file) {
+      try {
+        await fs.unlink(req.file.path);
+      } catch (unlinkError) {
+        console.error('Error deleting temp file:', unlinkError);
+      }
+    }
     next(error);
   }
 };
