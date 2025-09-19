@@ -4,8 +4,10 @@ import gravatar from 'gravatar';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { nanoid } from 'nanoid';
 import User from '../models/User.js';
 import HttpError from '../helpers/HttpError.js';
+import sendEmail from '../services/emailService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,12 +34,25 @@ export const register = async (req, res, next) => {
       d: 'identicon'
     });
 
+    // Генеруємо verificationToken
+    const verificationToken = nanoid();
+
     // Створюємо користувача
     const user = await User.create({
       email,
       password: hashedPassword,
       avatarURL,
+      verificationToken,
     });
+
+    // Відправляємо email з посиланням для верифікації
+    const verifyEmail = {
+      to: email,
+      subject: 'Verify email',
+      html: `<a target="_blank" href="${process.env.BASE_URL}/api/auth/verify/${verificationToken}">Click verify email</a>`,
+    };
+
+    await sendEmail(verifyEmail);
 
     res.status(201).json({
       user: {
@@ -59,6 +74,11 @@ export const login = async (req, res, next) => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
       throw HttpError(401, 'Email or password is wrong');
+    }
+
+    // Перевіряємо чи email верифікований
+    if (!user.verify) {
+      throw HttpError(401, 'Email not verified');
     }
 
     // Перевіряємо пароль
@@ -175,6 +195,59 @@ export const updateAvatar = async (req, res, next) => {
         console.error('Error deleting temp file:', unlinkError);
       }
     }
+    next(error);
+  }
+};
+
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { verificationToken } = req.params;
+
+    // Знаходимо користувача за verificationToken
+    const user = await User.findOne({ where: { verificationToken } });
+    if (!user) {
+      throw HttpError(404, 'User not found');
+    }
+
+    // Встановлюємо verificationToken в null та verify в true
+    await user.update({ verificationToken: null, verify: true });
+
+    res.json({
+      message: 'Verification successful',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resendVerifyEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    // Знаходимо користувача
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      throw HttpError(404, 'User not found');
+    }
+
+    // Перевіряємо чи email вже верифікований
+    if (user.verify) {
+      throw HttpError(400, 'Verification has already been passed');
+    }
+
+    // Відправляємо email з посиланням для верифікації
+    const verifyEmail = {
+      to: email,
+      subject: 'Verify email',
+      html: `<a target="_blank" href="${process.env.BASE_URL}/api/auth/verify/${user.verificationToken}">Click verify email</a>`,
+    };
+
+    await sendEmail(verifyEmail);
+
+    res.json({
+      message: 'Verification email sent',
+    });
+  } catch (error) {
     next(error);
   }
 };
