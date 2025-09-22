@@ -13,3 +13,7 @@ export const loginSchema = Joi.object({
 export const updateSubscriptionSchema = Joi.object({
   subscription: Joi.string().valid('starter', 'pro', 'business').required(),
 });
+
+export const resendVerifyEmailSchema = Joi.object({
+  email: Joi.string().email({ tlds: { allow: false } }).trim().required(),
+});
